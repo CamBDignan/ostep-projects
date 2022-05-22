@@ -4,6 +4,12 @@
 #include <string.h>
 #include <sys/wait.h>
 
+void error()
+{
+  char error_message[30] = "An error has occurred\n";
+  write(STDERR_FILENO, error_message, strlen(error_message));
+}
+
 int main(int argc, char* argv[])
 {
   while (1)
@@ -33,14 +39,27 @@ int main(int argc, char* argv[])
 
     // check for built-in commands
     if (strcmp(myArgs[0], "exit") == 0)
+    {
       exit(0);
+    }
+    else if (strcmp(myArgs[0], "cd") == 0)
+    {
+      if (count != 2 || chdir(myArgs[1]) != 0)
+        error();
+
+      continue;
+    }
 
     // if not a built-in, call execv on child process
     int rc = fork();
 
     if (rc == 0) // child process
     {
-      execv(myArgs[0], myArgs);
+      if (execv(myArgs[0], myArgs) != 0)
+      {
+        error();
+        exit(1);
+      }
     }
     else // parent process
     {
