@@ -13,14 +13,25 @@ int main(int argc, char* argv[])
     size_t len = 0;
     ssize_t lineSize = 0;
     lineSize = getline(&line, &len, stdin);
+    line[strcspn(line, "\n")] = 0; // remove newline char
 
     int rc = fork();
 
     if (rc == 0) // child process
     {
-      char* myArgs[2];
-      myArgs[0] = strdup("/bin/ls");
-      myArgs[1] = NULL;
+      char* line2 = strdup(line);
+      int count = 0;
+
+      while (strsep(&line, " ") != NULL )
+        ++count;
+
+      char* myArgs[count + 1];
+      int index = 0;
+
+      while ((*(myArgs + index) = strsep(&line2, " ")) != NULL)
+        ++index;
+
+      myArgs[count] = NULL;
       execv(myArgs[0], myArgs);
     }
     else // parent process
