@@ -12,6 +12,10 @@ void error()
 
 int main(int argc, char* argv[])
 {
+  int numPaths = 1;
+  char** paths = malloc(numPaths * sizeof(char*));
+  paths[0] = strdup("/bin");
+
   while (1)
   {
     printf("wish> ");
@@ -46,24 +50,61 @@ int main(int argc, char* argv[])
     {
       if (count != 2 || chdir(myArgs[1]) != 0)
         error();
-
-      continue;
     }
-
-    // if not a built-in, call execv on child process
-    int rc = fork();
-
-    if (rc == 0) // child process
+    else if (strcmp(myArgs[0], "path") == 0)
     {
-      if (execv(myArgs[0], myArgs) != 0)
+      numPaths = count - 1;
+      paths = malloc(numPaths * sizeof(char*));
+
+      for (int i = 1; i < count; i++)
       {
-        error();
-        exit(1);
+        paths[i - 1] = myArgs[i];
       }
     }
-    else // parent process
+    else
     {
-      wait(NULL);
+      // chech if we can find executable
+      int foundExecutable = 0;
+      char fullCommand[1024];
+
+      for (int i = 0; i < numPaths; i++)
+      {
+        strcpy(fullCommand, paths[i]);
+        strcat(fullCommand, "/");
+        strcat(fullCommand, myArgs[0]);
+
+        if (access(fullCommand, X_OK) == 0)
+        {
+          foundExecutable = 1;
+          myArgs[0] = strdup(fullCommand);
+          break;
+        }
+
+        for (int i = 0; i < 1023; i++)
+          fullCommand[i] = 0;
+      }
+
+      if (!foundExecutable)
+      {
+        error();
+        continue;
+      }
+
+      // if not a built-in, call execv on child process
+      int rc = fork();
+
+      if (rc == 0) // child process
+      {
+        if (execv(myArgs[0], myArgs) != 0)
+        {
+          error();
+          exit(1);
+        }
+      }
+      else // parent process
+      {
+        wait(NULL);
+      }
     }
   }
 
