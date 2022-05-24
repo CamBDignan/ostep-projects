@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 
 void error()
@@ -95,6 +96,27 @@ int main(int argc, char* argv[])
 
       if (rc == 0) // child process
       {
+        // check for redirection
+        for (int i = 0; i < count; i++)
+        {
+          if (strcmp(myArgs[i], ">") == 0)
+          {
+            // check for invalid redirection
+            if (i != count - 2 || strcmp(myArgs[count - 1], ">") == 0)
+            {
+              error();
+              exit(1);
+            }
+
+            // ok, we have a valid redirection
+            myArgs[i] = NULL;
+            int fd = open(myArgs[count - 1], O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
+            dup2(fd, 1);
+            dup2(fd, 2);
+            close(fd);
+          }
+        }
+
         if (execv(myArgs[0], myArgs) != 0)
         {
           error();
