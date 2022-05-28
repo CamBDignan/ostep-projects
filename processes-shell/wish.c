@@ -118,69 +118,104 @@ int main(int argc, char* argv[])
     }
     else
     {
-      // if not a built-in, call execv on child process
-      int rc = fork();
-
-      if (rc == 0) // child process
+      // check number of parallel commands
+      int numberOfParallelCommands = 1;
+      for (int i = 0; i < count; i++)
       {
-        // chech if we can find executable
-        int foundExecutable = 0;
-        char fullCommand[1024];
+        if (strcmp(myArgs[i], "&") == 0)
+          ++numberOfParallelCommands;
+      }
 
-        for (int i = 0; i < numPaths; i++)
+      int startIndexes[numberOfParallelCommands];
+      startIndexes[0] = 0;
+      int currIndex = 1;
+      for (int i = 0; i < count; i++)
+      {
+        if (strcmp(myArgs[i], "&") == 0)
         {
-          strcpy(fullCommand, paths[i]);
-          strcat(fullCommand, "/");
-          strcat(fullCommand, myArgs[0]);
-
-          if (access(fullCommand, X_OK) == 0)
-          {
-            foundExecutable = 1;
-            myArgs[0] = strdup(fullCommand);
-            break;
-          }
-
-          for (int i = 0; i < 1023; i++)
-            fullCommand[i] = 0;
+          myArgs[i] = NULL;
+          startIndexes[currIndex] = i + 1;
+          ++currIndex;
         }
+      }
 
-        if (!foundExecutable)
-        {
-          error();
-          exit(1);
-        }
+      for (int j = 0; j < numberOfParallelCommands; j++)
+      {
+        // if not a built-in, call execv on child process
+        int rc = fork();
 
-        // check for redirection
-        for (int i = 0; i < count; i++)
+        if (rc == 0) // child process
         {
-          if (strcmp(myArgs[i], ">") == 0)
+          // chech if we can find executable
+          int foundExecutable = 0;
+          char fullCommand[1024];
+
+          for (int i = 0; i < numPaths; i++)
           {
-            // check for invalid redirection
-            if (i != count - 2 || strcmp(myArgs[count - 1], ">") == 0)
+            strcpy(fullCommand, paths[i]);
+            strcat(fullCommand, "/");
+            strcat(fullCommand, myArgs[startIndexes[j]]);
+
+            if (access(fullCommand, X_OK) == 0)
             {
-              error();
-              exit(1);
+              foundExecutable = 1;
+              myArgs[startIndexes[j]] = strdup(fullCommand);
+              break;
             }
 
-            // ok, we have a valid redirection
-            myArgs[i] = NULL;
-            int fd = open(myArgs[count - 1], O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
-            dup2(fd, 1);
-            dup2(fd, 2);
-            close(fd);
+            for (int i = 0; i < 1023; i++)
+              fullCommand[i] = 0;
+          }
+
+          if (!foundExecutable)
+          {
+            error();
+            exit(1);
+          }
+
+          // get count of strings
+          count = 0;
+          while (myArgs[count + startIndexes[j]] != NULL)
+            ++count;
+
+          // create new args array
+          char* newArgs[count + 1];
+          newArgs[count] = NULL;
+          for (int i = 0; i < count; i++)
+          {
+            newArgs[i] = myArgs[startIndexes[j] + i];
+          }
+
+          // check for redirection
+          for (int i = 0; i < count; i++)
+          {
+            if (strcmp(newArgs[i], ">") == 0)
+            {
+              // check for invalid redirection
+              if (i != count - 2 || strcmp(newArgs[count - 1], ">") == 0)
+              {
+                error();
+                exit(1);
+              }
+
+              // ok, we have a valid redirection
+              newArgs[i] = NULL;
+              int fd = open(newArgs[count - 1], O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
+              dup2(fd, 1);
+              dup2(fd, 2);
+              close(fd);
+            }
+          }
+
+          if (execv(newArgs[0], newArgs) != 0)
+          {
+            error();
+            exit(1);
           }
         }
+      }
 
-        if (execv(myArgs[0], myArgs) != 0)
-        {
-          error();
-          exit(1);
-        }
-      }
-      else // parent process
-      {
-        wait(NULL);
-      }
+      while (wait(NULL) > 0);
     }
   }
 
