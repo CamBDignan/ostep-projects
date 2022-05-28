@@ -20,11 +20,67 @@ int main(int argc, char* argv[])
   while (1)
   {
     printf("wish> ");
-    char *line = NULL;
+    char *line3 = NULL;
     size_t len = 0;
     ssize_t lineSize = 0;
-    lineSize = getline(&line, &len, stdin);
-    line[strcspn(line, "\n")] = 0; // remove newline char
+    lineSize = getline(&line3, &len, stdin);
+    line3[strcspn(line3, "\n")] = 0; // remove newline char
+
+    // add space around > and &
+    int numberOfOperators = 0;
+    for (int i = 0; i < strlen(line3); i++)
+    {
+      if (line3[i] == '>' || line3[i] == '&')
+        ++numberOfOperators;
+    }
+
+    int lineLen = strlen(line3) + 2 * numberOfOperators;
+    char* line4 = malloc((lineLen + 1) * sizeof(char));
+    line4[lineLen] = '\0';
+    int lineIndex = 0;
+    for (int i = 0; i < strlen(line3); i++)
+    {
+      if (line3[i] == '>' || line3[i] == '&')
+      {
+        line4[lineIndex] = ' ';
+        line4[lineIndex + 1] = line3[i];
+        line4[lineIndex + 2] = ' ';
+        lineIndex += 3;
+      }
+      else
+      {
+        line4[lineIndex] = line3[i];
+        ++lineIndex;
+      }
+    }
+
+    // remove extra spaces
+    int numberOfExtraSpaces = 0;
+    for (int i = 1; i < strlen(line4); i++)
+    {
+      if (line4[i] == ' ' && line4[i - 1] == ' ')
+        ++numberOfExtraSpaces;
+    }
+
+    lineLen = strlen(line4) - numberOfExtraSpaces;
+    char* line = malloc((lineLen + 1) * sizeof(char));
+    line[lineLen] = '\0';
+    line[0] = line4[0];
+    lineIndex = 1;
+    for (int i = 1; i < strlen(line4); i++)
+    {
+      if (line4[i] == ' ' && line4[i - 1] == ' ')
+      {
+        continue;
+      }
+      else
+      {
+        line[lineIndex] = line4[i];
+        ++lineIndex;
+      }
+    }
+
+    printf("%s\n", line);
 
     char* line2 = strdup(line);
     int count = 0;
