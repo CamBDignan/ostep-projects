@@ -80,8 +80,6 @@ int main(int argc, char* argv[])
       }
     }
 
-    printf("%s\n", line);
-
     char* line2 = strdup(line);
     int count = 0;
 
