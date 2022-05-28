@@ -5,25 +5,17 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
+int numPaths;
+char** paths;
+
 void error()
 {
   char error_message[30] = "An error has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
 }
 
-int main(int argc, char* argv[])
+void MainHelper(char* line3)
 {
-  int numPaths = 1;
-  char** paths = malloc(numPaths * sizeof(char*));
-  paths[0] = strdup("/bin");
-
-  while (1)
-  {
-    printf("wish> ");
-    char *line3 = NULL;
-    size_t len = 0;
-    ssize_t lineSize = 0;
-    lineSize = getline(&line3, &len, stdin);
     line3[strcspn(line3, "\n")] = 0; // remove newline char
 
     // add space around > and &
@@ -55,21 +47,43 @@ int main(int argc, char* argv[])
     }
 
     // remove extra spaces
-    int numberOfExtraSpaces = 0;
-    for (int i = 1; i < strlen(line4); i++)
+    int numberOfExtraSpaces = line4[0] == ' ' || line4[0] == '\t';
+    int indexOfFirstNonSpace = -1;
+    int indexOfLastNonSpace = -1;
+    if (line4[0] != ' ' && line4[0] != '\t')
     {
-      if (line4[i] == ' ' && line4[i - 1] == ' ')
-        ++numberOfExtraSpaces;
+      indexOfFirstNonSpace = 0;
+      indexOfLastNonSpace = 0;
     }
 
-    lineLen = strlen(line4) - numberOfExtraSpaces;
-    char* line = malloc((lineLen + 1) * sizeof(char));
-    line[lineLen] = '\0';
-    line[0] = line4[0];
-    lineIndex = 1;
     for (int i = 1; i < strlen(line4); i++)
     {
-      if (line4[i] == ' ' && line4[i - 1] == ' ')
+      if ((line4[i] == ' ' || line4[i] == '\t') && ((line4[i - 1] == ' ' || line4[i - 1] == '\t')))
+        ++numberOfExtraSpaces;
+
+      if (line4[i] != ' ' && line4[i] != '\t')
+      {
+        indexOfLastNonSpace = i;
+
+        if (indexOfFirstNonSpace == -1)
+          indexOfFirstNonSpace = i;
+      }
+    }
+
+    if (indexOfFirstNonSpace == -1 || strlen(line4) == 0)
+      return;
+
+    numberOfExtraSpaces += strlen(line4) - 1 - indexOfLastNonSpace;
+
+    lineLen = strlen(line4) - numberOfExtraSpaces;
+
+    char* line = malloc((lineLen + 1) * sizeof(char));
+    line[lineLen] = '\0';
+    line[0] = line4[indexOfFirstNonSpace];
+    lineIndex = 1;
+    for (int i = indexOfFirstNonSpace + 1; i <= indexOfLastNonSpace; i++)
+    {
+      if ((line4[i] == ' ' || line4[i] == '\t') && ((line4[i - 1] == ' ' || line4[i - 1] == '\t')))
       {
         continue;
       }
@@ -84,14 +98,14 @@ int main(int argc, char* argv[])
     int count = 0;
 
     // get number of strings passed in by user
-    while (strsep(&line, " ") != NULL )
+    while (strsep(&line, " \t") != NULL )
       ++count;
 
     char* myArgs[count + 1];
     int index = 0;
 
     // build arguments array
-    while ((*(myArgs + index) = strsep(&line2, " ")) != NULL)
+    while ((*(myArgs + index) = strsep(&line2, " \t")) != NULL)
       ++index;
 
     myArgs[count] = NULL;
@@ -99,6 +113,12 @@ int main(int argc, char* argv[])
     // check for built-in commands
     if (strcmp(myArgs[0], "exit") == 0)
     {
+      if (count > 1)
+      {
+        error();
+        return;
+      }
+
       exit(0);
     }
     else if (strcmp(myArgs[0], "cd") == 0)
@@ -192,7 +212,7 @@ int main(int argc, char* argv[])
             if (strcmp(newArgs[i], ">") == 0)
             {
               // check for invalid redirection
-              if (i != count - 2 || strcmp(newArgs[count - 1], ">") == 0)
+              if (count <= 2 || i != count - 2 || strcmp(newArgs[count - 1], ">") == 0)
               {
                 error();
                 exit(1);
@@ -217,6 +237,46 @@ int main(int argc, char* argv[])
 
       while (wait(NULL) > 0);
     }
+}
+
+int main(int argc, char* argv[])
+{
+  numPaths = 1;
+  paths = malloc(numPaths * sizeof(char*));
+  paths[0] = strdup("/bin");
+
+  char *line3 = NULL;
+  size_t len = 0;
+  ssize_t lineSize = 0;
+
+  if (argc == 1) // interactive mode
+  {
+    while (1)
+    {
+      printf("wish> ");
+      lineSize = getline(&line3, &len, stdin);
+      MainHelper(line3);
+    }
+  }
+  else if (argc == 2) // batch mode
+  {
+    FILE* stream = fopen(argv[1], "r");
+
+    if (stream == NULL)
+    {
+      error();
+      return 1;
+    }
+
+    while((lineSize = getline(&line3, &len, stream)) != -1)
+    {
+      MainHelper(line3);
+    }
+  }
+  else
+  {
+    error();
+    return 1;
   }
 
   return 0;
