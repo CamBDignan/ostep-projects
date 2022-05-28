@@ -118,38 +118,38 @@ int main(int argc, char* argv[])
     }
     else
     {
-      // chech if we can find executable
-      int foundExecutable = 0;
-      char fullCommand[1024];
-
-      for (int i = 0; i < numPaths; i++)
-      {
-        strcpy(fullCommand, paths[i]);
-        strcat(fullCommand, "/");
-        strcat(fullCommand, myArgs[0]);
-
-        if (access(fullCommand, X_OK) == 0)
-        {
-          foundExecutable = 1;
-          myArgs[0] = strdup(fullCommand);
-          break;
-        }
-
-        for (int i = 0; i < 1023; i++)
-          fullCommand[i] = 0;
-      }
-
-      if (!foundExecutable)
-      {
-        error();
-        continue;
-      }
-
       // if not a built-in, call execv on child process
       int rc = fork();
 
       if (rc == 0) // child process
       {
+        // chech if we can find executable
+        int foundExecutable = 0;
+        char fullCommand[1024];
+
+        for (int i = 0; i < numPaths; i++)
+        {
+          strcpy(fullCommand, paths[i]);
+          strcat(fullCommand, "/");
+          strcat(fullCommand, myArgs[0]);
+
+          if (access(fullCommand, X_OK) == 0)
+          {
+            foundExecutable = 1;
+            myArgs[0] = strdup(fullCommand);
+            break;
+          }
+
+          for (int i = 0; i < 1023; i++)
+            fullCommand[i] = 0;
+        }
+
+        if (!foundExecutable)
+        {
+          error();
+          exit(1);
+        }
+
         // check for redirection
         for (int i = 0; i < count; i++)
         {
