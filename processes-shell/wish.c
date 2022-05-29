@@ -323,6 +323,9 @@ int main(int argc, char* argv[])
       }
     }
 
+    if (line3 != NULL)
+      free(line3);
+
     fclose(stream);
   }
   else
