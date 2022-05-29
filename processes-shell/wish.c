@@ -8,14 +8,24 @@
 int numPaths;
 char** paths;
 
+void freePaths()
+{
+  for (int i = 0; i < numPaths; i++)
+    free(paths[i]);
+
+  free(paths);
+}
+
 void error()
 {
   char error_message[30] = "An error has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
 }
 
-void MainHelper(char* line3)
+// 0 = continue, 1 = exit successfully, 2 = exit with error
+int MainHelper(char* line3)
 {
+    // line3: original string from getline
     line3[strcspn(line3, "\n")] = 0; // remove newline char
 
     // add space around > and &
@@ -27,6 +37,7 @@ void MainHelper(char* line3)
     }
 
     int lineLen = strlen(line3) + 2 * numberOfOperators;
+    // line4: newly allocated string with spaces around > and &
     char* line4 = malloc((lineLen + 1) * sizeof(char));
     line4[lineLen] = '\0';
     int lineIndex = 0;
@@ -45,6 +56,8 @@ void MainHelper(char* line3)
         ++lineIndex;
       }
     }
+
+    // free(line3); // done with line3 at this point
 
     // remove extra spaces
     int numberOfExtraSpaces = line4[0] == ' ' || line4[0] == '\t';
@@ -71,13 +84,14 @@ void MainHelper(char* line3)
     }
 
     if (indexOfFirstNonSpace == -1 || strlen(line4) == 0)
-      return;
+      return 0;
 
     numberOfExtraSpaces += strlen(line4) - 1 - indexOfLastNonSpace;
 
     lineLen = strlen(line4) - numberOfExtraSpaces;
-
+    // line: newly allocated string with extra spaces removed
     char* line = malloc((lineLen + 1) * sizeof(char));
+    char* line5 = line;
     line[lineLen] = '\0';
     line[0] = line4[indexOfFirstNonSpace];
     lineIndex = 1;
@@ -94,13 +108,20 @@ void MainHelper(char* line3)
       }
     }
 
+    free(line4); // done with line4 at this point
+
+    // TODO: line2: newly allocated exact copy of line
     char* line2 = strdup(line);
+    char* line6 = line2;
     int count = 0;
 
     // get number of strings passed in by user
     while (strsep(&line, " \t") != NULL )
       ++count;
 
+    free(line5); // done with line at this point
+
+    // TODO: myArgs points to line2
     char* myArgs[count + 1];
     int index = 0;
 
@@ -116,15 +137,19 @@ void MainHelper(char* line3)
       if (count > 1)
       {
         error();
-        return;
+	free(line6);
+        return 0;
       }
 
-      exit(0);
+      free(line6);
+      return 1;
     }
     else if (strcmp(myArgs[0], "cd") == 0)
     {
       if (count != 2 || chdir(myArgs[1]) != 0)
         error();
+
+      free(line6);
     }
     else if (strcmp(myArgs[0], "path") == 0)
     {
@@ -133,8 +158,10 @@ void MainHelper(char* line3)
 
       for (int i = 1; i < count; i++)
       {
-        paths[i - 1] = myArgs[i];
+        paths[i - 1] = strdup(myArgs[i]);
       }
+
+      free(line6);
     }
     else
     {
@@ -161,6 +188,7 @@ void MainHelper(char* line3)
 
       for (int j = 0; j < numberOfParallelCommands; j++)
       {
+        // TODO: free memory in child process
         // if not a built-in, call execv on child process
         int rc = fork();
 
@@ -236,6 +264,7 @@ void MainHelper(char* line3)
       }
 
       while (wait(NULL) > 0);
+      free(line6);
     }
 }
 
@@ -248,6 +277,7 @@ int main(int argc, char* argv[])
   char *line3 = NULL;
   size_t len = 0;
   ssize_t lineSize = 0;
+  int rc = 0;
 
   if (argc == 1) // interactive mode
   {
@@ -255,7 +285,15 @@ int main(int argc, char* argv[])
     {
       printf("wish> ");
       lineSize = getline(&line3, &len, stdin);
-      MainHelper(line3);
+      rc = MainHelper(line3);
+      free(line3);
+      line3 = NULL;
+
+      if (rc > 0)
+      {
+        freePaths();
+        exit(rc - 1);
+      }
     }
   }
   else if (argc == 2) // batch mode
@@ -264,20 +302,34 @@ int main(int argc, char* argv[])
 
     if (stream == NULL)
     {
+      freePaths();
       error();
       return 1;
     }
 
     while((lineSize = getline(&line3, &len, stream)) != -1)
     {
-      MainHelper(line3);
+      rc = MainHelper(line3);
+      free(line3);
+      line3 = NULL;
+
+      if (rc > 0)
+      {
+        freePaths();
+        fclose(stream);
+        exit(rc - 1);
+      }
     }
+
+    fclose(stream);
   }
   else
   {
+    freePaths();
     error();
     return 1;
   }
 
+  freePaths();
   return 0;
 }
