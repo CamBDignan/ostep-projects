@@ -153,6 +153,7 @@ int MainHelper(char* line3)
     }
     else if (strcmp(myArgs[0], "path") == 0)
     {
+      freePaths();
       numPaths = count - 1;
       paths = malloc(numPaths * sizeof(char*));
 
