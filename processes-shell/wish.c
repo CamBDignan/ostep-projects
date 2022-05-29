@@ -218,7 +218,8 @@ int MainHelper(char* line3)
           if (!foundExecutable)
           {
             error();
-            exit(1);
+	    free(line6);
+            return 2;
           }
 
           // get count of strings
@@ -243,7 +244,8 @@ int MainHelper(char* line3)
               if (count <= 2 || i != count - 2 || strcmp(newArgs[count - 1], ">") == 0)
               {
                 error();
-                exit(1);
+		free(line6);
+                return 2;
               }
 
               // ok, we have a valid redirection
@@ -258,7 +260,8 @@ int MainHelper(char* line3)
           if (execv(newArgs[0], newArgs) != 0)
           {
             error();
-            exit(1);
+	    free(line6);
+            return 2;
           }
         }
       }
