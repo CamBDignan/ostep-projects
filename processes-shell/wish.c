@@ -266,6 +266,8 @@ int MainHelper(char* line3)
       while (wait(NULL) > 0);
       free(line6);
     }
+
+    return 0;
 }
 
 int main(int argc, char* argv[])
