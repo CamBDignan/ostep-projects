@@ -27,6 +27,10 @@ run_test () {
     eval $(cat $testfile) > tests-out/$testnum.out 2> tests-out/$testnum.err
     echo $? > tests-out/$testnum.rc
 
+    # check for memory leaks
+    eval valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 -q $(cat $testfile) > /dev/null 2> /dev/null
+    echo $?
+
     # post: execute this after the test is done, to clean up
     local postfile=$testdir/$testnum.post
     if [[ -f $postfile ]]; then
@@ -90,16 +94,17 @@ run_and_check () {
 	echo -n -e "running test $testnum: "
 	cat $testdir/$testnum.desc
     fi
-    run_test $testdir $testnum $verbose
+    othercheck=$(run_test $testdir $testnum $verbose)
     rccheck=$(check_test $testdir $testnum $contrunning rc)
     outcheck=$(check_test $testdir $testnum $contrunning out)
     errcheck=$(check_test $testdir $testnum $contrunning err)
-    othercheck=0
+    rc=$(< $testdir/$testnum.rc)
+    # othercheck=0
     if [[ -f $testdir/$testnum.other ]]; then
 	othercheck=$(check_test $testdir $testnum $contrunning other)
     fi
     # echo "results: outcheck:$outcheck errcheck:$errcheck"
-    if (( $rccheck == 0 )) && (( $outcheck == 0 )) && (( $errcheck == 0 )) && (( $othercheck == 0 )); then
+    if (( $rccheck == 0 )) && (( $outcheck == 0 )) && (( $errcheck == 0 )) && (( $othercheck == $rc )); then
 	echo -e "test $testnum: ${GREEN}passed${NONE}"
 	if (( $verbose == 1 )); then
 	    echo ""
@@ -114,8 +119,11 @@ run_and_check () {
 	if (( $errcheck == 1 )); then
 	    print_error_message $testnum $contrunning err
 	fi
-	if (( $othercheck == 1 )); then
-	    print_error_message $testnum $contrunning other
+	if (( $othercheck != $rc )); then
+	    builtin echo -e "test $testnum: ${RED}memory leak detected. run valgrind --leak-check=full --show-leak-kinds=all $(cat $testdir/$testnum.run) for details${NONE}"
+    	    if (( $contrunning == 0 )); then
+	        exit 1
+            fi
 	fi
     fi
 }
