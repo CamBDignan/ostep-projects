@@ -121,13 +121,18 @@ int MainHelper(char* line3)
 
     free(line5); // done with line at this point
 
-    // TODO: myArgs points to line2
     char* myArgs[count + 1];
     int index = 0;
 
     // build arguments array
-    while ((*(myArgs + index) = strsep(&line2, " \t")) != NULL)
+    char* temp;
+    while ((temp = strsep(&line2, " \t")) != NULL)
+    {
+      myArgs[index] = strdup(temp);
       ++index;
+    }
+
+    free(line6);
 
     myArgs[count] = NULL;
 
@@ -137,11 +142,15 @@ int MainHelper(char* line3)
       if (count > 1)
       {
         error();
-	free(line6);
+	for (int i = 0; i < count; i++)
+          free(myArgs[i]);
+
         return 0;
       }
 
-      free(line6);
+      for (int i = 0; i < count; i++)
+        free(myArgs[i]);
+
       return 1;
     }
     else if (strcmp(myArgs[0], "cd") == 0)
@@ -149,7 +158,8 @@ int MainHelper(char* line3)
       if (count != 2 || chdir(myArgs[1]) != 0)
         error();
 
-      free(line6);
+      for (int i = 0; i < count; i++)
+        free(myArgs[i]);
     }
     else if (strcmp(myArgs[0], "path") == 0)
     {
@@ -162,7 +172,8 @@ int MainHelper(char* line3)
         paths[i - 1] = strdup(myArgs[i]);
       }
 
-      free(line6);
+      for (int i = 0; i < count; i++)
+        free(myArgs[i]);
     }
     else
     {
@@ -181,6 +192,7 @@ int MainHelper(char* line3)
       {
         if (strcmp(myArgs[i], "&") == 0)
         {
+          free(myArgs[i]);
           myArgs[i] = NULL;
           startIndexes[currIndex] = i + 1;
           ++currIndex;
@@ -189,7 +201,6 @@ int MainHelper(char* line3)
 
       for (int j = 0; j < numberOfParallelCommands; j++)
       {
-        // TODO: free memory in child process
         // if not a built-in, call execv on child process
         int rc = fork();
 
@@ -208,7 +219,8 @@ int MainHelper(char* line3)
             if (access(fullCommand, X_OK) == 0)
             {
               foundExecutable = 1;
-              myArgs[startIndexes[j]] = strdup(fullCommand);
+              free(myArgs[startIndexes[j]]);
+	      myArgs[startIndexes[j]] = strdup(fullCommand);
               break;
             }
 
@@ -219,39 +231,49 @@ int MainHelper(char* line3)
           if (!foundExecutable)
           {
             error();
-	    free(line6);
+	    for (int i = 0; i < count; i++)
+            {
+              if (myArgs[i] != NULL)
+                free(myArgs[i]);
+            }
+
             return 2;
           }
 
           // get count of strings
-          count = 0;
-          while (myArgs[count + startIndexes[j]] != NULL)
-            ++count;
+          int newCount = 0;
+          while (myArgs[newCount + startIndexes[j]] != NULL)
+            ++newCount;
 
           // create new args array
-          char* newArgs[count + 1];
-          newArgs[count] = NULL;
-          for (int i = 0; i < count; i++)
+          char* newArgs[newCount + 1];
+          newArgs[newCount] = NULL;
+          for (int i = 0; i < newCount; i++)
           {
             newArgs[i] = myArgs[startIndexes[j] + i];
           }
 
           // check for redirection
-          for (int i = 0; i < count; i++)
+          for (int i = 0; i < newCount; i++)
           {
             if (strcmp(newArgs[i], ">") == 0)
             {
               // check for invalid redirection
-              if (count <= 2 || i != count - 2 || strcmp(newArgs[count - 1], ">") == 0)
+              if (newCount <= 2 || i != newCount - 2 || strcmp(newArgs[newCount - 1], ">") == 0)
               {
                 error();
-		free(line6);
+		for (int i = 0; i < count; i++)
+                {
+                  if (myArgs[i] != NULL)
+                    free(myArgs[i]);
+                }
+
                 return 2;
               }
 
               // ok, we have a valid redirection
               newArgs[i] = NULL;
-              int fd = open(newArgs[count - 1], O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
+              int fd = open(newArgs[newCount - 1], O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
               dup2(fd, 1);
               dup2(fd, 2);
               close(fd);
@@ -261,14 +283,23 @@ int MainHelper(char* line3)
           if (execv(newArgs[0], newArgs) != 0)
           {
             error();
-	    free(line6);
+	    for (int i = 0; i < count; i++)
+            {
+              if (myArgs[i] != NULL)
+                free(myArgs[i]);
+            }
+
             return 2;
           }
         }
       }
 
       while (wait(NULL) > 0);
-      free(line6);
+      for (int i = 0; i < count; i++)
+      {
+        if (myArgs[i] != NULL)
+          free(myArgs[i]);
+      }
     }
 
     return 0;
