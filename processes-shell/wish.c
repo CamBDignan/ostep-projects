@@ -84,9 +84,14 @@ int MainHelper(char* line3)
     }
 
     if (indexOfFirstNonSpace == -1 || strlen(line4) == 0)
+    {
+      free(line4);
       return 0;
+    }
 
-    numberOfExtraSpaces += strlen(line4) - 1 - indexOfLastNonSpace;
+    int len4 = strlen(line4);
+    if (indexOfLastNonSpace < len4 - 1)
+      ++numberOfExtraSpaces;
 
     lineLen = strlen(line4) - numberOfExtraSpaces;
     // line: newly allocated string with extra spaces removed
