@@ -148,13 +148,19 @@ int MainHelper(char* line3)
       {
         error();
 	for (int i = 0; i < count; i++)
+        {
+//          printf("freeing %s\n", myArgs[i]);
           free(myArgs[i]);
+	}
 
         return 0;
       }
 
       for (int i = 0; i < count; i++)
+      {
+//        printf("freeing %s\n", myArgs[i]);
         free(myArgs[i]);
+      }
 
       return 1;
     }
@@ -164,7 +170,10 @@ int MainHelper(char* line3)
         error();
 
       for (int i = 0; i < count; i++)
+      {
+//	printf("freeing %s\n", myArgs[i]);
         free(myArgs[i]);
+      }
     }
     else if (strcmp(myArgs[0], "path") == 0)
     {
@@ -178,7 +187,10 @@ int MainHelper(char* line3)
       }
 
       for (int i = 0; i < count; i++)
+      {
+//        printf("freeing %s\n", myArgs[i]);
         free(myArgs[i]);
+      }
     }
     else
     {
@@ -197,6 +209,7 @@ int MainHelper(char* line3)
       {
         if (strcmp(myArgs[i], "&") == 0)
         {
+//          printf("freeing %s\n", myArgs[i]);
           free(myArgs[i]);
           myArgs[i] = NULL;
           startIndexes[currIndex] = i + 1;
@@ -214,6 +227,20 @@ int MainHelper(char* line3)
           // chech if we can find executable
           int foundExecutable = 0;
           char fullCommand[1024];
+
+          if (myArgs[startIndexes[j]] == NULL)
+          {
+            for (int i = 0; i < count; i++)
+            {
+              if (myArgs[i] != NULL)
+              {
+//                printf("freeing %s\n", myArgs[i]);
+                free(myArgs[i]);
+              }
+            }
+
+            return 0;
+	  }
 
           for (int i = 0; i < numPaths; i++)
           {
@@ -239,7 +266,10 @@ int MainHelper(char* line3)
 	    for (int i = 0; i < count; i++)
             {
               if (myArgs[i] != NULL)
+              {
+//                printf("freeing %s\n", myArgs[i]);
                 free(myArgs[i]);
+              }
             }
 
             return 2;
@@ -270,9 +300,11 @@ int MainHelper(char* line3)
 		for (int i = 0; i < count; i++)
                 {
                   if (myArgs[i] != NULL)
+                  {
+//                    printf("freeing %s\n", myArgs[i]);
                     free(myArgs[i]);
+		  }
                 }
-
                 return 2;
               }
 
@@ -291,7 +323,10 @@ int MainHelper(char* line3)
 	    for (int i = 0; i < count; i++)
             {
               if (myArgs[i] != NULL)
+              {
+//                printf("freeing %s\n", myArgs[i]);
                 free(myArgs[i]);
+              }
             }
 
             return 2;
@@ -303,7 +338,10 @@ int MainHelper(char* line3)
       for (int i = 0; i < count; i++)
       {
         if (myArgs[i] != NULL)
+        {
+//          printf("freeing %s\n", myArgs[i]);
           free(myArgs[i]);
+	}
       }
     }
 
