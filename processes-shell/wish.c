@@ -96,7 +96,6 @@ int MainHelper(char* line3)
     lineLen = strlen(line4) - numberOfExtraSpaces;
     // line: newly allocated string with extra spaces removed
     char* line = malloc((lineLen + 1) * sizeof(char));
-    char* line5 = line;
     line[lineLen] = '\0';
     line[0] = line4[indexOfFirstNonSpace];
     lineIndex = 1;
@@ -115,29 +114,26 @@ int MainHelper(char* line3)
 
     free(line4); // done with line4 at this point
 
-    // TODO: line2: newly allocated exact copy of line
-    char* line2 = strdup(line);
-    char* line6 = line2;
-    int count = 0;
-
     // get number of strings passed in by user
-    while (strsep(&line, " \t") != NULL )
-      ++count;
-
-    free(line5); // done with line at this point
-
-    char* myArgs[count + 1];
-    int index = 0;
+    int count = 1;
+    for (int i = 0; line[i + 1] != '\0'; i++)
+    {
+      if ((line[i] == ' ' || line[i] == '\t') && (line[i + 1] != ' ' && line[i + 1] != '\t'))
+        ++count;
+    }
 
     // build arguments array
+    char* myArgs[count + 1];
+    int index = 0;
+    char* pointerToBeginningOfLine = line;
     char* temp;
-    while ((temp = strsep(&line2, " \t")) != NULL)
+    while ((temp = strsep(&line, " \t")) != NULL)
     {
       myArgs[index] = strdup(temp);
       ++index;
     }
 
-    free(line6);
+    free(pointerToBeginningOfLine);
 
     myArgs[count] = NULL;
 
