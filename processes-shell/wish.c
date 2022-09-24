@@ -192,7 +192,7 @@ int MainHelper(char* line3)
       for (int i = 0; i < count; i++)
       {
         if (strcmp(myArgs[i], "&") == 0)
-	{
+        {
           free(myArgs[i]);
           myArgs[i] = NULL;
           startIndexes[currIndex] = i + 1;
