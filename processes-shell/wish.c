@@ -34,6 +34,8 @@ void parseWordFromLine(char* line, int currStartPos, int* nextStartPos, int* len
 
     if (line[i] != ' ' && line[i] != '\t')
       ++len;
+
+    ++i;
   }
 
   *nextStartPos = i;
@@ -45,13 +47,12 @@ int MainHelper(char* line3)
 {
     // line3: original string from getline
     line3[strcspn(line3, "\n")] = 0; // remove newline char
-    printf("%s\n", line3);
 
     int lineLen = 0;
     int nextStartPos = 0;
     int lenOfCurrWord = 0;
-    int firstNonSpaceOfLine3 = 0;
     int line3Len = strlen(line3);
+    int firstNonSpaceOfLine3 = line3Len;
     for (int i = 0; i < line3Len; i++)
     {
       if (line3[i] != ' ' && line3[i] != '\t')
@@ -61,23 +62,25 @@ int MainHelper(char* line3)
       }
     }
 
+    if (firstNonSpaceOfLine3 == line3Len)
+      return 0;
+
     int currStartPos = firstNonSpaceOfLine3;
     while (currStartPos < line3Len)
     {
-      printf("currStartPos = %d\n", currStartPos);
       parseWordFromLine(line3, currStartPos, &nextStartPos, &lenOfCurrWord);
       lineLen += (lenOfCurrWord + 1);
       currStartPos = nextStartPos;
     }
 
-    char* line = malloc(lineLen * sizeof(char));
+    --lineLen;
+    char* line = malloc((lineLen + 1) * sizeof(char));
     currStartPos = firstNonSpaceOfLine3;
     int currIndexOfLine = 0;
     while (currStartPos < line3Len)
     {
-      printf("currStartPos = %d\n", currStartPos);
       parseWordFromLine(line3, currStartPos, &nextStartPos, &lenOfCurrWord);
-      for (int i = currIndexOfLine; i < lenOfCurrWord; i++)
+      for (int i = currIndexOfLine; i < currIndexOfLine + lenOfCurrWord; i++)
       {
         line[i] = line3[currStartPos];
 	++currStartPos;
@@ -89,92 +92,6 @@ int MainHelper(char* line3)
     }
 
     line[lineLen] = '\0';
-
-    /*// add space around > and &
-    int numberOfOperators = 0;
-    for (int i = 0; i < strlen(line3); i++)
-    {
-      if (line3[i] == '>' || line3[i] == '&')
-        ++numberOfOperators;
-    }
-
-    int lineLen = strlen(line3) + 2 * numberOfOperators;
-    // line4: newly allocated string with spaces around > and &
-    char* line4 = malloc((lineLen + 1) * sizeof(char));
-    line4[lineLen] = '\0';
-    int lineIndex = 0;
-    for (int i = 0; i < strlen(line3); i++)
-    {
-      if (line3[i] == '>' || line3[i] == '&')
-      {
-        line4[lineIndex] = ' ';
-        line4[lineIndex + 1] = line3[i];
-        line4[lineIndex + 2] = ' ';
-        lineIndex += 3;
-      }
-      else
-      {
-        line4[lineIndex] = line3[i];
-        ++lineIndex;
-      }
-    }
-
-    // free(line3); // done with line3 at this point
-
-    // remove extra spaces
-    int numberOfExtraSpaces = line4[0] == ' ' || line4[0] == '\t';
-    int indexOfFirstNonSpace = -1;
-    int indexOfLastNonSpace = -1;
-    if (line4[0] != ' ' && line4[0] != '\t')
-    {
-      indexOfFirstNonSpace = 0;
-      indexOfLastNonSpace = 0;
-    }
-
-    for (int i = 1; i < strlen(line4); i++)
-    {
-      if ((line4[i] == ' ' || line4[i] == '\t') && ((line4[i - 1] == ' ' || line4[i - 1] == '\t')))
-        ++numberOfExtraSpaces;
-
-      if (line4[i] != ' ' && line4[i] != '\t')
-      {
-        indexOfLastNonSpace = i;
-
-        if (indexOfFirstNonSpace == -1)
-          indexOfFirstNonSpace = i;
-      }
-    }
-
-    if (indexOfFirstNonSpace == -1 || strlen(line4) == 0)
-    {
-      free(line4);
-      return 0;
-    }
-
-    int len4 = strlen(line4);
-    if (indexOfLastNonSpace < len4 - 1)
-      ++numberOfExtraSpaces;
-
-    lineLen = strlen(line4) - numberOfExtraSpaces;
-    // line: newly allocated string with extra spaces removed
-    char* line = malloc((lineLen + 1) * sizeof(char));
-    line[lineLen] = '\0';
-    line[0] = line4[indexOfFirstNonSpace];
-    lineIndex = 1;
-    for (int i = indexOfFirstNonSpace + 1; i <= indexOfLastNonSpace; i++)
-    {
-      if ((line4[i] == ' ' || line4[i] == '\t') && ((line4[i - 1] == ' ' || line4[i - 1] == '\t')))
-      {
-        continue;
-      }
-      else
-      {
-        line[lineIndex] = line4[i];
-        ++lineIndex;
-      }
-    }
-
-    free(line4); // done with line4 at this point*/
 
     // get number of strings passed in by user
     int count = 1;
@@ -380,7 +297,6 @@ int MainHelper(char* line3)
 
 int main(int argc, char* argv[])
 {
-  printf("starting program!\n");
   numPaths = 1;
   paths = malloc(numPaths * sizeof(char*));
   paths[0] = strdup("/bin");
